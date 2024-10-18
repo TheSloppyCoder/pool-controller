@@ -457,7 +457,6 @@ class Main:
                     self.lbl_pump_icon.place(anchor="nw", x=860, y=0)
                     self.img_pool_pump.configure(file="img/pump-on-img.png")
                 else:
-                    print("Switch off Pool Pump")
                     RELAY_PIN.off()
                     self.lbl_pump_icon.place_forget()
                     self.img_pool_pump.configure(file="img/pump-img.png")
@@ -472,6 +471,9 @@ class Main:
         try:
             with open("config.json") as file:
                 data = json.load(file)
+                
+            with open("sensor_data.json") as sfile:
+                s_data = json.load(sfile)
         except FileNotFoundError:
             messagebox.showerror("Error", "There was an error loading the settings, possible file not found")
 
@@ -488,8 +490,17 @@ class Main:
             self.lbl_sand_icon.place_forget()
 
         # Check Hot Temp
-        # TODO: Add Temp Conditions if statements
-
+        if s_data["pool_temp"] >= data["hot_temp_indicator"]:
+            self.lbl_temp_hot_icon.place(anchor="nw", x=580, y=0)
+        else:
+            self.lbl_temp_hot_icon.place_forget()
+            
+        # Check Cold Temp
+        if s_data["pool_temp"] <= data["cold_temp_indicator"]:
+            self.lbl_temp_cold_icon.place(anchor="nw", x=650, y=0)
+        else:
+            self.lbl_temp_cold_icon.place_forget()
+            
 
 
     # -------------------------------------------------------------------------
