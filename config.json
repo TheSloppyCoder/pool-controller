@@ -1,0 +1,9 @@
+{
+    "pump_on_hour": 11,
+    "pump_off_hour": 15,
+    "minimum_trigger_temp": 4,
+    "chlorine_date": "10/30/24",
+    "sand_date": "12/03/24",
+    "hot_temp_indicator": 4,
+    "cold_temp_indicator": 4
+}
