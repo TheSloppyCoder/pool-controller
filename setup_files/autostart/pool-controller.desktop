@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Pool Controller
+Type=Application
+Comment=Pool Controller Program
+Exec=sh /home/user/Desktop/launcher.sh
