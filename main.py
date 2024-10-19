@@ -426,12 +426,14 @@ class Main:
         if self.is_bypass_on == False:
             RELAY_PIN.on()
             self.is_bypass_on = True
+            self.is_pool_pump_on = True
             self.lbl_pump_icon.place(anchor="nw", x=860, y=0)
             self.img_pool_pump.configure(file="img/bypass-on-img.png")
             self.lbl_bypass_icon.place(anchor="nw", x=790, y=0)
         else:
             RELAY_PIN.off()
             self.is_bypass_on = False
+            self.is_pool_pump_on = False
             self.lbl_pump_icon.place_forget()
             self.img_pool_pump.configure(file="img/pump-img.png")
             self.lbl_bypass_icon.place_forget()
@@ -459,6 +461,7 @@ class Main:
                     self.img_pool_pump.configure(file="img/pump-on-img.png")
                 else:
                     RELAY_PIN.off()
+                    self.is_pool_pump_on = False
                     self.lbl_pump_icon.place_forget()
                     self.img_pool_pump.configure(file="img/pump-img.png")
 
