@@ -442,16 +442,17 @@ class Main:
     #          Read Config Time and Temp Data and Trigger Accordingly
     # -------------------------------------------------------------------------
     def toggle_pool_pump(self):
-        if self.time_now.second in self.time_intervals:
+        if self.time_now.minute in self.time_intervals:
             if self.is_bypass_on:
                 pass
             else:
                 with open("config.json") as read_file:
                     config = json.load(read_file)
-                #
-                # TODO: Check aswell for the Roof Temp
-                # Need Actual Temp Data
-                if self.time_now.hour >= config["pump_on_hour"] and self.time_now.hour < config["pump_off_hour"]:
+
+                with open("sensor_data.json") as s_file:
+                    s_data = json.load(s_file)
+
+                if self.time_now.hour >= config["pump_on_hour"] and self.time_now.hour < config["pump_off_hour"] and config["minimum_trigger_temp"] <= s_data["roof_temp"]:
                     RELAY_PIN.on()
                     self.is_pool_pump_on = True
                     self.lbl_pump_icon.place(anchor="nw", x=860, y=0)
