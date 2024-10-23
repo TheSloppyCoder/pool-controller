@@ -358,7 +358,7 @@ class Main:
         
         self.lbl_pool_temp.configure(text=f"POOL TEMP         {data['pool_temp']} °C")
         self.lbl_lapa_temp.configure(text=f"LAPA TEMP         {data['lapa_temp']} °C")
-        self.lbl_roof_temp.configure(text=f"ROOF TEMP         {data['roof_temp']} °C")
+        self.lbl_roof_temp.configure(text=f"OPEN TEMP         {data['open_temp']} °C")
         self.lbl_humidity.configure(text=f"HUMIDITY             {data['humidity']} %")
 
     # -------------------------------------------------------------------------
@@ -454,7 +454,7 @@ class Main:
                 with open("sensor_data.json") as s_file:
                     s_data = json.load(s_file)
 
-                if self.time_now.hour >= config["pump_on_hour"] and self.time_now.hour < config["pump_off_hour"] and config["minimum_trigger_temp"] <= s_data["roof_temp"]:
+                if self.time_now.hour >= config["pump_on_hour"] and self.time_now.hour < config["pump_off_hour"] and config["minimum_trigger_temp"] <= s_data["open_temp"]:
                     RELAY_PIN.on()
                     self.is_pool_pump_on = True
                     self.lbl_pump_icon.place(anchor="nw", x=860, y=0)
