@@ -112,10 +112,10 @@ class Main:
                                      text='LAPA TEMP         23.5 °C')
         self.lbl_lapa_temp.place(anchor="nw", x=440, y=240)
 
-        self.lbl_roof_temp = ttk.Label(self.dashboard_page, name="lbl_roof_temp")
-        self.lbl_roof_temp.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
+        self.lbl_open_temp = ttk.Label(self.dashboard_page, name="lbl_open_temp")
+        self.lbl_open_temp.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
                                      text='ROOF TEMP         23.5 °C')
-        self.lbl_roof_temp.place(anchor="nw", x=440, y=310)
+        self.lbl_open_temp.place(anchor="nw", x=440, y=310)
 
         self.lbl_humidity = ttk.Label(self.dashboard_page, name="lbl_humidity")
         self.lbl_humidity.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
@@ -210,7 +210,7 @@ class Main:
 
         self.lbl_temp_trigger = ttk.Label(self.settings_page, name="lbl_temp_trigger")
         self.lbl_temp_trigger.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
-                                        text='Roof Temp Trigger')
+                                        text='API Temp Trigger')
         self.lbl_temp_trigger.place(anchor="nw", x=0, y=350)
         self.seperator_roof_temp = ttk.Separator(self.settings_page, name="seperator_roof_temp")
         self.seperator_roof_temp.configure(orient="horizontal")
@@ -358,7 +358,7 @@ class Main:
         
         self.lbl_pool_temp.configure(text=f"POOL TEMP         {data['pool_temp']} °C")
         self.lbl_lapa_temp.configure(text=f"LAPA TEMP         {data['lapa_temp']} °C")
-        self.lbl_roof_temp.configure(text=f"OPEN TEMP         {data['open_temp']} °C")
+        self.lbl_open_temp.configure(text=f"OPEN TEMP         {data['open_temp']} °C")
         self.lbl_humidity.configure(text=f"HUMIDITY             {data['humidity']} %")
 
     # -------------------------------------------------------------------------
