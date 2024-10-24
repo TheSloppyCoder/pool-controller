@@ -70,4 +70,4 @@ while True:
     with open("sensor_data.json", "w") as save_file:
         save_file.write(save_data)
         
-    time.sleep(3)
+    time.sleep(5)
