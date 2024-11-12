@@ -2,4 +2,4 @@
 Name=Pool Controller
 Type=Application
 Comment=Pool Controller Program
-Exec=sh /home/user/Desktop/launcher.sh
+Exec=sh /home/admin/Desktop/launcher.sh
