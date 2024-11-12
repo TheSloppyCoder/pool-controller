@@ -4,15 +4,21 @@ import tkinter.ttk as ttk
 import datetime as dt
 from datetime import datetime
 from tkinter import messagebox
-from tkcalendar import Calendar, DateEntry
+from tkcalendar import DateEntry
+import requests
+from w1thermsensor import W1ThermSensor, Sensor
 import json
-from gpiozero import LED
+from gpiozero import LED, CPUTemperature
+
 
 version = "Version | V1.0"
 
+cpu = CPUTemperature()
 
-RELAY_PIN = LED(26)
+RELAY_PIN = LED(24)
 
+#roof_sensor = W1ThermSensor(sensor_type=Sensor.DS18B20, sensor_id="3cd2f64802d3")
+pool_sensor = W1ThermSensor(sensor_type=Sensor.DS18B20, sensor_id="25780e1e64ff")
 
 
 class Main:
@@ -33,6 +39,9 @@ class Main:
         self.is_bypass_on = False
         self.is_pool_pump_on = False
         self.time_intervals = [0, 15, 30, 45]
+        self.api_call_intervals = [0, 30]
+        self.is_weather_good = False
+        self.pool_temp = 0.0
 
         # Main widget
         self.mainwindow = self.root
@@ -104,22 +113,22 @@ class Main:
 
         self.lbl_pool_temp = ttk.Label(self.dashboard_page, name="lbl_pool_temp")
         self.lbl_pool_temp.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
-                                     text='POOL TEMP         23.5 °C')
+                                     text='POOL TEMP       wait...')
         self.lbl_pool_temp.place(anchor="nw", x=440, y=170)
 
-        self.lbl_lapa_temp = ttk.Label(self.dashboard_page, name="lbl_lapa_temp")
-        self.lbl_lapa_temp.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
-                                     text='LAPA TEMP         23.5 °C')
-        self.lbl_lapa_temp.place(anchor="nw", x=440, y=240)
+        self.lbl_oapi_temp = ttk.Label(self.dashboard_page, name="lbl_oapi_temp")
+        self.lbl_oapi_temp.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
+                                     text='MEYER TEMP    wait...')
+        self.lbl_oapi_temp.place(anchor="nw", x=440, y=240)
 
-        self.lbl_open_temp = ttk.Label(self.dashboard_page, name="lbl_open_temp")
-        self.lbl_open_temp.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
-                                     text='ROOF TEMP         23.5 °C')
-        self.lbl_open_temp.place(anchor="nw", x=440, y=310)
+        self.lbl_condition = ttk.Label(self.dashboard_page, name="lbl_condition")
+        self.lbl_condition.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
+                                     text='CONDITION        wait...')
+        self.lbl_condition.place(anchor="nw", x=440, y=310)
 
         self.lbl_humidity = ttk.Label(self.dashboard_page, name="lbl_humidity")
         self.lbl_humidity.configure(background="#181C14", font="{Arial} 28 {bold}", foreground="#ffffff",
-                                    text='HUMIDITY             23.5 %')
+                                    text='HUMIDITY           wait...')
         self.lbl_humidity.place(anchor="nw", x=440, y=380)
 
         self.btn_bypass = ttk.Button(self.dashboard_page, name="btn_bypass", command=lambda: self.toggle_bypass())
@@ -167,6 +176,10 @@ class Main:
         self.lbl_version = ttk.Label(self.dashboard_page, name="lbl_version")
         self.lbl_version.configure(background="#181C14", font="{Arial} 10 {bold}", foreground="#ffffff", text=version)
         self.lbl_version.place(anchor="nw", x=0, y=540)
+
+        self.lbl_cpu_temp = ttk.Label(self.dashboard_page, name="lbl_cpu_temp")
+        self.lbl_cpu_temp.configure(background="#181C14", font="{Arial} 10 {bold}", foreground="#ffffff")
+        self.lbl_cpu_temp.place(anchor="nw", x=0, y=510)
 
 
         self.dashboard_page.pack(fill="both", expand=True) # Pack and show Dashboard Frame
@@ -242,9 +255,9 @@ class Main:
         self.lbl_sand_date.configure(background="#181C14", font="{Arial} 20 {bold}", foreground="#ffffff",
                                      text='Next Sand Add Date')
         self.lbl_sand_date.place(anchor="nw", x=580, y=240)
-        self.dt_chlorine = DateEntry(self.settings_page, font="{Arial} 16 {}", background="cyan", foreground="black", bd=2)
+        self.dt_chlorine = DateEntry(self.settings_page, font="{Arial} 16 {}", background="cyan", foreground="black", bd=2, date_pattern="yy/m/d")
         self.dt_chlorine.place(anchor="nw", x=400, y=183)
-        self.dt_sand = DateEntry(self.settings_page, font="{Arial} 16 {}", background="orange", foreground="black", bd=2)
+        self.dt_sand = DateEntry(self.settings_page, font="{Arial} 16 {}", background="orange", foreground="black", bd=2, date_pattern="yy/m/d")
         self.dt_sand.place(anchor="nw", x=400, y=243)
         self.lbl_settings_chlorine_img = ttk.Label(self.settings_page, name="lbl_chlorine")
         self.img_chlorine_settings = tk.PhotoImage(file="img/chlorine-settings-img.png")
@@ -339,27 +352,81 @@ class Main:
         self.mainwindow.mainloop()
 
 
-
+    # -------------------------------------------------------------------------
+    #               The Clock Function Triggers Every 1 Second
+    #               This allows us to check configs, toggle pool pump -
+    #               read Sensors and weather + CPU Temp.
+    # -------------------------------------------------------------------------
     def clock(self):
         self.root.after(1000, self.clock)
         self.time_now = dt.datetime.now()
         self.lbl_time.configure(text=self.time_now.strftime("%H:%M:%S  %p"))
         self.toggle_pool_pump()
         self.check_config()
-        self.check_and_display_sensor_data()
+
+        # ----------- Check and Display Pool Temp from DS18B20 Temp Sensor ----
+        try:
+            self.pool_temp = pool_sensor.get_temperature()
+            self.lbl_pool_temp.configure(text=f"POOL TEMP         {round(self.pool_temp, 1)} °C")
+        except Exception:
+            self.lbl_pool_temp.configure(text=f"POOL TEMP [ERROR]")
+
+        self.check_and_display_weather_data()
+
+        self.lbl_cpu_temp.configure(text="CPU TEMP | " + str(round(cpu.temperature, 1)) + " °C")
         
         
     # -------------------------------------------------------------------------
-    #               Load Sensor Data and Display on Dashboard
+    #               Load Weather Data and Display on Dashboard from API
     # -------------------------------------------------------------------------    
-    def check_and_display_sensor_data(self):
-        with open("sensor_data.json") as file:
-            data = json.load(file)
+    def check_and_display_weather_data(self):
+        if self.time_now.second in self.api_call_intervals:
+            with open("api.txt", "r") as f:
+                api_key = f.read()
+
+            owm_api = "https://api.openweathermap.org/data/2.5/weather"
+
+            weather_params = {
+                "lat": -26.585360,
+                "lon": 28.006899,
+                "units": "metric",
+                "appid": api_key
+            }
+
+            # ---- Display API Weather Data --------------------------------
+            try:
+                response = requests.get(owm_api, params=weather_params)
+                temp = response.json()["main"]["temp"]
+                condition = response.json()["weather"][0]["main"]
+                humid = response.json()["main"]["humidity"]
+
+                self.lbl_oapi_temp.configure(text=f"MEYER TEMP      {round(temp, 1)} °C")
+                self.lbl_condition.configure(text=f"CONDITION         {condition} ")
+                self.lbl_humidity.configure(text=f"HUMIDITY             {round(humid, 1)} %")
+
+                # ------- Check if Weather Temp is good to Activate pool pump --------------------
+                try:
+                    with open("config.json", "r") as f:
+                        config = json.load(f)
+
+                    if temp >= config["minimum_trigger_temp"]:
+                        self.is_weather_good = True
+                    else:
+                        self.is_weather_good = False
+
+                except Exception as e:
+                    messagebox.showerror("Error", str(e))
+
+            except Exception as e:
+                self.lbl_oapi_temp.configure(text=f"MEYER TEMP  [ERROR]")
+                self.lbl_condition.configure(text=f"CONDITION   [ERROR]")
+                self.lbl_humidity.configure(text=f"HUMIDITY     [ERROR]")
+
+
+
         
-        self.lbl_pool_temp.configure(text=f"POOL TEMP         {data['pool_temp']} °C")
-        self.lbl_lapa_temp.configure(text=f"LAPA TEMP         {data['lapa_temp']} °C")
-        self.lbl_open_temp.configure(text=f"OPEN TEMP         {data['open_temp']} °C")
-        self.lbl_humidity.configure(text=f"HUMIDITY             {data['humidity']} %")
+
+
 
     # -------------------------------------------------------------------------
     #               Save Values of Settings Page to config.json
@@ -369,8 +436,8 @@ class Main:
             "pump_on_hour": tk.getint(self.sb_pump_on.get()),
             "pump_off_hour": tk.getint(self.sb_pump_off.get()),
             "minimum_trigger_temp": tk.getint(self.sb_temp_trigger.get()),
-            "chlorine_date": self.dt_chlorine.get_date().strftime("%m/%d/%y"),
-            "sand_date": self.dt_sand.get_date().strftime("%m/%d/%y"),
+            "chlorine_date": self.dt_chlorine.get_date().strftime("%y/%m/%d"),
+            "sand_date": self.dt_sand.get_date().strftime("%y/%m/%d"),
             "hot_temp_indicator": tk.getint(self.sb_hot_temp_value.get()),
             "cold_temp_indicator": tk.getint(self.sb_cold_temp_value.get())
         }
@@ -414,7 +481,7 @@ class Main:
             self.sb_cold_temp_value.set(data["cold_temp_indicator"])
             self.sb_cold_temp.configure(textvariable=self.sb_cold_temp_value)
 
-        except FileNotFoundError:
+        except Exception:
             messagebox.showerror("Error", "There was an error loading the settings, possible file not found")
 
 
@@ -451,10 +518,7 @@ class Main:
                 with open("config.json") as read_file:
                     config = json.load(read_file)
 
-                with open("sensor_data.json") as s_file:
-                    s_data = json.load(s_file)
-
-                if self.time_now.hour >= config["pump_on_hour"] and self.time_now.hour < config["pump_off_hour"] and config["minimum_trigger_temp"] <= s_data["open_temp"]:
+                if self.time_now.hour >= config["pump_on_hour"] and self.time_now.hour < config["pump_off_hour"] and self.is_weather_good:
                     RELAY_PIN.on()
                     self.is_pool_pump_on = True
                     self.lbl_pump_icon.place(anchor="nw", x=860, y=0)
@@ -471,13 +535,12 @@ class Main:
     #          Check Config Data and Trigger events and reminders accordingly
     # -------------------------------------------------------------------------
     def check_config(self):
-        today = datetime.today().strftime("%m/%d/%y")
+        today = datetime.today().strftime("%y/%m/%d")
+
         try:
             with open("config.json") as file:
                 data = json.load(file)
-                
-            with open("sensor_data.json") as sfile:
-                s_data = json.load(sfile)
+
         except FileNotFoundError:
             messagebox.showerror("Error", "There was an error loading the settings, possible file not found")
 
@@ -494,13 +557,13 @@ class Main:
             self.lbl_sand_icon.place_forget()
 
         # Check Hot Temp
-        if s_data["pool_temp"] >= data["hot_temp_indicator"]:
+        if self.pool_temp >= data["hot_temp_indicator"]:
             self.lbl_temp_hot_icon.place(anchor="nw", x=580, y=0)
         else:
             self.lbl_temp_hot_icon.place_forget()
-            
+
         # Check Cold Temp
-        if s_data["pool_temp"] <= data["cold_temp_indicator"]:
+        if self.pool_temp <= data["cold_temp_indicator"]:
             self.lbl_temp_cold_icon.place(anchor="nw", x=650, y=0)
         else:
             self.lbl_temp_cold_icon.place_forget()
@@ -511,12 +574,22 @@ class Main:
     #          Refresh Icons and Images, after Settings Page is Closed.
     # -------------------------------------------------------------------------
     def refresh_controller_status(self):
-        if self.is_pool_pump_on:
+        if self.is_pool_pump_on and self.is_bypass_on:
+            self.lbl_bypass_icon.place(anchor="nw", x=790, y=0)
+            self.lbl_pump_icon.place(anchor="nw", x=860, y=0)
+            self.img_pool_pump.configure(file="img/bypass-on-img.png")
+        else:
+            self.lbl_bypass_icon.place_forget()
+            self.lbl_pump_icon.place_forget()
+            self.img_pool_pump.configure(file="img/pump-img.png")
+
+        if self.is_pool_pump_on and not self.is_bypass_on:
             self.lbl_pump_icon.place(anchor="nw", x=860, y=0)
             self.img_pool_pump.configure(file="img/pump-on-img.png")
         else:
             self.lbl_pump_icon.place_forget()
             self.img_pool_pump.configure(file="img/pump-img.png")
+
 
 
 

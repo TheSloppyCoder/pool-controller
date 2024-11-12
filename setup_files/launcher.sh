@@ -2,13 +2,9 @@
 
 
 # shellcheck disable=SC2164
-cd /home/fanie/Desktop/pool-controller/
+cd /home/admin/Desktop/pool-controller/
 
-sleep 15
-
-python read_sensors.py &
-
-sleep 3
+sleep 4
 
 python main.py &
 

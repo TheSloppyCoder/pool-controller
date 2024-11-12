@@ -4,7 +4,7 @@ import time
 
 # Test DHT22 Sensor on Pin 27 Raspberry pi
 
-dhtDevice = adafruit_dht.DHT22(board.D27, use_pulseio=False)
+dhtDevice = adafruit_dht.DHT22(board.D24, use_pulseio=False)
 
 while True:
     try:
